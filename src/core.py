@@ -1,14 +1,14 @@
 import discord
 import requests
 
-import src
+import keys
 from src.botcommands import BotCommands
 
 client = discord.Client()
 
 
 def get_task_by_name(name):
-    data = requests.post(src.__get_all_tasks_url__, data={'pr_t_name': name})
+    data = requests.post(keys.__get_all_tasks_url__, data={'pr_t_name': name})
     return data.json()['task'][0]
 
 
@@ -18,23 +18,23 @@ def task_format(json):
 
 
 def reg(author_id):
-    data = requests.post(src.__reg_url__, data={'user_id': author_id})
+    data = requests.post(keys.__reg_url__, data={'user_id': author_id})
     return data.json()['code']
 
 
 def push_task(discord_id, t_name, t_link):
-    data = requests.post(src.__push_task_url__, data={'discord_id': discord_id, 't_name': t_name, 't_link': t_link})
+    data = requests.post(keys.__push_task_url__, data={'discord_id': discord_id, 't_name': t_name, 't_link': t_link})
     return data.json()['code']
 
 
 def validate(id_in_stack):
-    data = requests.post(src.__validate_url__, data={'id_in_stack': id_in_stack})
+    data = requests.post(keys.__validate_url__, data={'id_in_stack': id_in_stack})
     print(data.content)
     return data.json()['code']
 
 
 def get_info(discord_id):
-    data = requests.post(src.__get_user_url__, data={'discord_id': discord_id})
+    data = requests.post(keys.__get_user_url__, data={'discord_id': discord_id})
     result = data.json()
     print(result['user'][0])
     if result['code'] == 1:
@@ -53,7 +53,7 @@ def show_help():
     msg += '!regme - зарегистрироваться\n'
     msg += '!profile - отобразить ваш профиль\n'
     msg += '!exec <Название> <Ссылка> - отправить на проверку задачу, указав её название и ссылку на неё. Ссылки ' \
-           'принимаются с сайтов https://pastebin.com/ и https://ideone.com/\n '
+           'принимаются с сайтов https://pastebin.com/ и https://ideone.com/'
     msg += '```\n'
     return msg
 
@@ -143,4 +143,4 @@ async def on_ready():
     game = discord.Game(name='Life simulator')
     await client.change_presence(game=game)
 
-client.run(src.__TOKEN__)
+client.run(keys.__TOKEN__)

@@ -1,7 +1,8 @@
 import discord
 import requests
-
-import keys
+import sys
+sys.path.append('../')
+from src import keys
 from src.botcommands import BotCommands
 
 client = discord.Client()
@@ -39,7 +40,7 @@ def get_info(discord_id):
     print(result['user'][0])
     if result['code'] == 1:
         mes = '\n```\n'
-        mes += 'Количество выполненных заданий: ' + result['user'][0]['task_count'] + '\n'
+        mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '\n'
         mes += 'Очки: ' + result['user'][0]['points'] + '\n'
         mes += '```\n'
     else:
@@ -52,8 +53,9 @@ def show_help():
     msg += '!help - показать помощь\n'
     msg += '!regme - зарегистрироваться\n'
     msg += '!profile - отобразить ваш профиль\n'
+    msg += '!show_task - получить ссылку на список заданий\n'
     msg += '!exec <Название> <Ссылка> - отправить на проверку задачу, указав её название и ссылку на неё. Ссылки ' \
-           'принимаются с сайтов https://pastebin.com/ и https://ideone.com/'
+           'принимаются с сайтов https://pastebin.com/ или https://ideone.com/'
     msg += '```\n'
     return msg
 

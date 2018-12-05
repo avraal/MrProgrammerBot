@@ -10,3 +10,6 @@ class BotCommands(Enum):
     PROFILE = '!profile'
     SHOW_STACK = '!show_stack'
     HELP = '!help'
+    GET_CURRENT_PHASE = '!get_current_phase'  # TODO: not realized
+    START_PHASE = '!start_phase'
+    START_SCENARIO = '!start_scenario'  # TODO: not realized

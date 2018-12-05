@@ -61,10 +61,30 @@ def show_help():
     msg += '!regme - зарегистрироваться\n'
     msg += '!profile - отобразить ваш профиль\n'
     msg += '!show_task - получить ссылку на список заданий\n'
+    msg += '!show_task <Название> - получить информацию об указанном задании\n'
     msg += '!exec <Название> <Ссылка> - отправить на проверку задачу, указав её название и ссылку на неё. Ссылки ' \
-           'принимаются с сайтов https://pastebin.com/ или https://ideone.com/'
+           'принимаются с сайтов https://pastebin.com/ или https://ideone.com/\n'
+    msg += 'Сложность задания зависит от цвета. По возростающей от лёгкого до сложного: белый, зелёный, синий, ' \
+           'фиолетовый '
     msg += '```\n'
     return msg
+
+
+def str_to_embed(title, text, points):
+    text = parse_task(text)
+    embed = discord.Embed(title=title, description=text)
+    points = float(points)
+    colors = {'common': 0xd5d5d5, 'uncommon': 0x1be700, 'rare': 0x008eff, 'epic': 0xc800e6}
+    if 1 <= points < 1.3:
+        embed.colour = colors['common']
+    elif 1.3 <= points < 1.5:
+        embed.colour = colors['uncommon']
+    elif 1.5 <= points < 1.7:
+        embed.colour = colors['rare']
+    elif points >= 1.7:
+        embed.colour = colors['epic']
+
+    return embed
 
 
 @client.event
@@ -129,12 +149,15 @@ async def on_message(message):
         target = message.author
         a = message.content.split(' ')
         try:
-            if len(a) != 2:
+            if len(a) == 2:
+                res = get_task_by_name(a[1])
+                embed = str_to_embed(task_format(res)['Name'], task_format(res)['Text'], task_format(res)['Points'])
+                await client.send_message(target, embed=embed)
+                msg = ''
+            elif len(a) == 1:
+                msg = keys.__get_tasklist_url__
+            else:
                 raise KeyError
-            res = get_task_by_name(a[1])
-            msg = '```\n' + task_format(res)['Name'] + '\n'
-            msg += parse_task(task_format(res)['Text']) + '\n'
-            msg += '\n```\n'
         except KeyError:
             msg = 'Задание с таким названием не найдено'
 

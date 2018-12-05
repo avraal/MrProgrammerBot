@@ -1,9 +1,19 @@
 import discord
 import requests
 import sys
+
 sys.path.append('../')
 from src import keys
 from src.botcommands import BotCommands
+from enum import Enum, unique
+
+
+@unique
+class Languages(Enum):
+    CPP = 'C++'
+    CS = 'C#'
+    WEB = 'Web'
+
 
 client = discord.Client()
 
@@ -25,8 +35,13 @@ def task_format(json):
     return task
 
 
-def reg(author_id):
-    data = requests.post(keys.__reg_url__, data={'user_id': author_id})
+def reg(author_id, author_class):
+    for l in Languages:
+        if author_class == l.value:
+            break
+        else:
+            return 3
+    data = requests.post(keys.__reg_url__, data={'user_id': author_id, 'author_class': author_class})
     return data.json()['code']
 
 
@@ -49,6 +64,7 @@ def get_info(discord_id):
         mes = '\n```\n'
         mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '\n'
         mes += 'Очки: ' + result['user'][0]['points'] + '\n'
+        mes += 'Язык: ' + result['user'][0]['u_class'] + '\n'
         mes += '```\n'
     else:
         mes = 'Ошибка запроса'
@@ -58,7 +74,11 @@ def get_info(discord_id):
 def show_help():
     msg = '\n```dsconfig\n'
     msg += '!help - показать помощь\n'
-    msg += '!regme - зарегистрироваться\n'
+    msg += '!regme <Язык> - зарегистрироваться\n'
+    msg += 'Список доступных языков: '
+    for l in Languages:
+        msg += l.value + ' '
+    msg += '\n'
     msg += '!profile - отобразить ваш профиль\n'
     msg += '!show_task - получить ссылку на список заданий\n'
     msg += '!show_task <Название> - получить информацию об указанном задании\n'
@@ -85,6 +105,22 @@ def str_to_embed(title, text, points):
         embed.colour = colors['epic']
 
     return embed
+
+
+def start_scenario_message():
+    return ""
+
+
+def get_phase(pr_ph_id):
+    data = requests.post(keys.__get_phase_by_id_url__, data={'pr_ph_id': pr_ph_id})
+    js = data.json()
+    code = js['code']
+    if code == 0:
+        return 'Фаза не найдена'
+    msg = '```\n'
+    msg += js['text']
+    msg += '\n```\n'
+    return msg
 
 
 @client.event
@@ -136,14 +172,32 @@ async def on_message(message):
     if message.content.startswith(BotCommands.PROFILE.value):
         msg = get_info(message.author.id)
 
+    if message.content.startswith(BotCommands.START_SCENARIO.value):
+        if message.author == message.server.owner:
+            msg = start_scenario_message()
+
+    if message.content.startswith(BotCommands.START_PHASE.value):
+        if message.author == message.server.owner:
+            a = message.content.split(' ')
+            if len(a) != 2:
+                msg = 'Не указан id фазы'
+            else:
+                msg = get_phase(a[1])
+
     if message.content.startswith(BotCommands.REGME.value):
-        msg = reg(message.author.id)
-        if msg == 1:
-            msg = 'Вы успешно зарегистировались'
-        elif msg == 2:
-            msg = 'Вы уже зарегистрированы'
+        a = message.content.split(' ')
+        if len(a) != 2:
+            msg = 'Вы не указали все необходимые параметры для регистрации'
         else:
-            msg = 'Ошибка запроса'
+            msg = reg(message.author.id, a[1])
+            if msg == 1:
+                msg = 'Вы успешно зарегистировались'
+            elif msg == 2:
+                msg = 'Вы уже зарегистрированы'
+            elif msg == 3:
+                msg = 'Нельзя выбрать этот язык. Используйте !help чтобы узнать подробности'
+            else:
+                msg = 'Ошибка запроса'
 
     if message.content.startswith(BotCommands.SHOW_TASK.value):
         target = message.author
@@ -173,5 +227,6 @@ async def on_ready():
     print('---')
     game = discord.Game(name='Life simulator')
     await client.change_presence(game=game)
+
 
 client.run(keys.__TOKEN__)

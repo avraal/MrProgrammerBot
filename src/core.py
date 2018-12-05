@@ -13,6 +13,13 @@ def get_task_by_name(name):
     return data.json()['task'][0]
 
 
+def parse_task(task):
+    task = task.replace('<br>', '')
+    task = task.replace('<pre>', '')
+    task = task.replace('</pre>', '')
+    return task
+
+
 def task_format(json):
     task = {'Name': json['pr_t_name'], 'Text': json['pr_t_text'], 'Points': json['pr_t_points']}
     return task
@@ -126,14 +133,13 @@ async def on_message(message):
                 raise KeyError
             res = get_task_by_name(a[1])
             msg = '```\n' + task_format(res)['Name'] + '\n'
-            msg += task_format(res)['Text'] + '\n'
-            # msg += 'Points: '
+            msg += parse_task(task_format(res)['Text']) + '\n'
             msg += '\n```\n'
-            # msg += str(task_format(res)['Points']) + '\n```\n'
         except KeyError:
             msg = 'Задание с таким названием не найдено'
 
-    await client.send_message(target, msg)
+    if msg:
+        await client.send_message(target, msg)
 
 
 @client.event

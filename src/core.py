@@ -63,7 +63,7 @@ def get_info(discord_id):
     if result['code'] == 1:
         mes = '\n```\n'
         mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '\n'
-        mes += 'Очки: ' + result['user'][0]['points'] + '\n'
+        mes += 'Байты: ' + result['user'][0]['points'] + '\n'
         mes += 'Язык: ' + result['user'][0]['u_class'] + '\n'
         mes += '```\n'
     else:
@@ -177,12 +177,17 @@ async def on_message(message):
             msg = start_scenario_message()
 
     if message.content.startswith(BotCommands.START_PHASE.value):
-        if message.author == message.server.owner:
+        # if message.author == message.server.owner:
             a = message.content.split(' ')
             if len(a) != 2:
                 msg = 'Не указан id фазы'
             else:
-                msg = get_phase(a[1])
+                msg = '@everyone\n'
+                msg += get_phase(a[1])
+                channel = message.server.get_channel('519937196891832321')
+                target = channel
+                await client.send_message(target, msg)
+                return
 
     if message.content.startswith(BotCommands.REGME.value):
         a = message.content.split(' ')
@@ -207,7 +212,7 @@ async def on_message(message):
                 res = get_task_by_name(a[1])
                 embed = str_to_embed(task_format(res)['Name'], task_format(res)['Text'], task_format(res)['Points'])
                 await client.send_message(target, embed=embed)
-                msg = ''
+                return
             elif len(a) == 1:
                 msg = keys.__get_tasklist_url__
             else:

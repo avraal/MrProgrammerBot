@@ -177,7 +177,7 @@ async def on_message(message):
             msg = start_scenario_message()
 
     if message.content.startswith(BotCommands.START_PHASE.value):
-        # if message.author == message.server.owner:
+        if message.author == message.server.owner:
             a = message.content.split(' ')
             if len(a) != 2:
                 msg = 'Не указан id фазы'
@@ -235,3 +235,4 @@ async def on_ready():
 
 
 client.run(keys.__TOKEN__)
+# client.run(keys.__TOKEN_BAKA__)

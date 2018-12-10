@@ -7,9 +7,12 @@ class BotCommands(Enum):
     REGME = '!regme'
     EXEC = '!exec'
     VALIDATE = '!validate'
+    DISCARD = '!discard'
     PROFILE = '!profile'
     SHOW_STACK = '!show_stack'
     HELP = '!help'
+    GET_MAX_POINTS = '!get_max_points'
+    CHANGE_LANG = '!change_lang'
     GET_CURRENT_PHASE = '!get_current_phase'  # TODO: not realized
     START_PHASE = '!start_phase'
     START_SCENARIO = '!start_scenario'  # TODO: not realized

@@ -14,6 +14,10 @@ class Languages(Enum):
     CS = 'C#'
     WEB = 'Web'
 
+    @classmethod
+    def has_value(cls, value):
+        return any(value == item.value for item in cls)
+
 
 client = discord.Client()
 
@@ -50,8 +54,25 @@ def push_task(discord_id, t_name, t_link):
     return data.json()['code']
 
 
+def get_max_points():
+    data = requests.post(keys.__get_max_points__)
+    return data.json()['points']
+
+
+def discard(id_in_stack):
+    data = requests.post(keys.__discard_url__, data={'id_in_stack': id_in_stack})
+    print(data.content)
+    return data.json()
+
+
 def validate(id_in_stack):
     data = requests.post(keys.__validate_url__, data={'id_in_stack': id_in_stack})
+    print(data.content)
+    return data.json()
+
+
+def change_lang(lang, d_id):
+    data = requests.post(keys.__change_lang__, data={'lang': lang, 'd_id': d_id})
     print(data.content)
     return data.json()['code']
 
@@ -62,8 +83,8 @@ def get_info(discord_id):
     print(result['user'][0])
     if result['code'] == 1:
         mes = '\n```\n'
-        mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '\n'
-        mes += 'Байты: ' + result['user'][0]['points'] + '\n'
+        mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '/' + result['user'][0]['total_count'] + '\n'
+        mes += 'Байты: ' + str(round(float(result['user'][0]['points']), 3)) + '\n'
         mes += 'Язык: ' + result['user'][0]['u_class'] + '\n'
         mes += '```\n'
     else:
@@ -75,6 +96,7 @@ def show_help():
     msg = '\n```dsconfig\n'
     msg += '!help - показать помощь\n'
     msg += '!regme <Язык> - зарегистрироваться\n'
+    msg += '!change_lang <Язык> - изменить выбранный при регистрации язык\n'
     msg += 'Список доступных языков: '
     for l in Languages:
         msg += l.value + ' '
@@ -136,16 +158,36 @@ async def on_message(message):
     if message.content.startswith(BotCommands.HELP.value):
         msg = show_help()
 
+    if message.content.startswith(BotCommands.DISCARD.value):
+        if message.author == message.server.owner:
+            a = message.content.split(' ')
+            if len(a) != 2:
+                msg = 'Не верное количество параметров'
+            else:
+                data = discard(a[1])
+                code = data['code']
+                if code == 1:
+                    msg = 'Задание ' + data['t_name'] + ' отклонено'
+                    target = message.server.get_member(data['d_id'])
+                elif code == 2:
+                    msg = 'Ошибка запроса'
+                else:
+                    msg = 'Неизвестная ошибка'
+        else:
+            msg = 'У вас не достаточно прав'
+
     if message.content.startswith(BotCommands.VALIDATE.value):
         if message.author == message.server.owner:
             a = message.content.split(' ')
             if len(a) != 2:
                 msg = 'Не верное количество параметров'
             else:
-                msg = validate(a[1])
-                if msg == 1:
-                    msg = 'Задание выполнено'
-                elif msg == 2:
+                data = validate(a[1])
+                code = data['code']
+                if code == 1:
+                    msg = 'Задание ' + data['t_name'] + ' выполнено'
+                    target = message.server.get_member(data['d_id'])
+                elif code == 2:
                     msg = 'Ошибка запроса'
                 else:
                     msg = 'Неизвестная ошибка'
@@ -176,6 +218,20 @@ async def on_message(message):
         if message.author == message.server.owner:
             msg = start_scenario_message()
 
+    if message.content.startswith(BotCommands.CHANGE_LANG.value):
+        a = message.content.split(' ')
+        if len(a) != 2:
+            msg = 'У этой команды всего 1 параметр - другой язык'
+        else:
+            if Languages.has_value(a[1]):
+                msg = change_lang(a[1], message.author.id)
+                if msg == 1:
+                    msg = 'Язык изменён на ' + a[1]
+                else:
+                    msg = 'Ошибка запроса'
+            else:
+                msg = 'Не верный язык'
+
     if message.content.startswith(BotCommands.START_PHASE.value):
         if message.author == message.server.owner:
             a = message.content.split(' ')
@@ -188,6 +244,9 @@ async def on_message(message):
                 target = channel
                 await client.send_message(target, msg)
                 return
+
+    if message.content.startswith(BotCommands.GET_MAX_POINTS.value):
+        msg = str(round(float(get_max_points()), 3))
 
     if message.content.startswith(BotCommands.REGME.value):
         a = message.content.split(' ')

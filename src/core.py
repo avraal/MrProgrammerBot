@@ -1,4 +1,5 @@
 import discord
+import re
 import requests
 import sys
 
@@ -67,6 +68,12 @@ def discard(id_in_stack):
 
 def validate(id_in_stack):
     data = requests.post(keys.__validate_url__, data={'id_in_stack': id_in_stack})
+    print(data.content)
+    return data.json()
+
+
+def add_item(d_id, i_id, count):
+    data = requests.post(keys.__add_item__, data={'d_id': d_id, 'i_id': i_id, 'count': count})
     print(data.content)
     return data.json()
 
@@ -157,6 +164,37 @@ async def on_message(message):
 
     if message.content.startswith(BotCommands.HELP.value):
         msg = show_help()
+
+    if message.content.startswith(BotCommands.ADD_ITEM.value):
+        if message.author == message.server.owner:
+            a = message.content.split(' ')
+            count = 0
+            if len(a) == 3:
+                count = 0
+            elif len(a) == 4:
+                count = a[3]
+
+            data = add_item(a[1], a[2], count)  # d_id, i_id, count
+
+            if data:
+                code = data['code']
+                if code == 0:
+                    msg = 'Предмет не найден'
+                elif code == 2:
+                    msg = 'Пользователь не найден'
+                elif code == 3:
+                    msg = 'Ошибка запроса'
+                elif code == 4:
+                    target = message.server.get_member(a[1])
+                    msg = 'Вы получили ' + data['item_name']
+                elif code == 5:
+                    target = message.server.get_member(a[1])
+                    msg = 'Количество ' + data['item_name'] + ' увеличено на ' + str(data['count'])
+                elif code == 6:
+                    msg = 'У вас уже есть этот предмет'
+
+        else:
+            msg = 'У вас не достаточно прав'
 
     if message.content.startswith(BotCommands.DISCARD.value):
         if message.author == message.server.owner:
@@ -294,4 +332,3 @@ async def on_ready():
 
 
 client.run(keys.__TOKEN__)
-# client.run(keys.__TOKEN_BAKA__)

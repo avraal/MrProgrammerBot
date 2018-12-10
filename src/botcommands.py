@@ -16,3 +16,4 @@ class BotCommands(Enum):
     GET_CURRENT_PHASE = '!get_current_phase'  # TODO: not realized
     START_PHASE = '!start_phase'
     START_SCENARIO = '!start_scenario'  # TODO: not realized
+    ADD_ITEM = '!add_item'

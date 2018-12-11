@@ -28,6 +28,26 @@ def get_task_by_name(name):
     return data.json()['task'][0]
 
 
+def get_inv(d_id):
+    data = requests.post(keys.__get_inventory_url__, data={'d_id': d_id})
+    msg = ''
+    code = data.json()['code']
+    if code == 0:
+        msg = 'Пользователь не найден'
+    elif code == 2:
+        msg = 'Инвентарь пуст'
+    elif code == 1:
+        msg = '```'
+        items = data.json()['item']
+        for i in items:
+            msg += i['pr_i_title']
+            if i['pr_i_can_stack'] == '1':
+                msg += ' (' + i['i_count'] + ') шт.'
+            msg += '\n'
+        msg += '```'
+    return msg
+
+
 def parse_task(task):
     task = task.replace('<br>', '')
     task = task.replace('<pre>', '')
@@ -56,38 +76,67 @@ def push_task(discord_id, t_name, t_link):
 
 
 def get_max_points():
-    data = requests.post(keys.__get_max_points__)
+    data = requests.post(keys.__get_max_points_url__)
     return data.json()['points']
 
 
 def discard(id_in_stack):
     data = requests.post(keys.__discard_url__, data={'id_in_stack': id_in_stack})
-    print(data.content)
     return data.json()
 
 
 def validate(id_in_stack):
     data = requests.post(keys.__validate_url__, data={'id_in_stack': id_in_stack})
-    print(data.content)
     return data.json()
+
+
+def remove_item(d_id, i_id, count):
+    data = requests.post(keys.__remove_item_url__, data={'d_id': d_id, 'i_id': i_id, 'count': count})
+    data = data.json()
+    msg = ''
+    if data['code'] == 2:
+        msg = 'Кто-то пытался украсть у вас ' + data['i_name']
+        if data['i_can_stack'] == '1' and int(data['i_count']) > 1:
+            msg += ' в количестве ' + data['i_count'] + ' шт.'
+    elif data['code'] == 1:
+        msg = 'Предмет ' + data['i_name'] + ' был удалён из вашего инвентаря'
+        if data['i_can_stack'] == '1' and int(data['i_count']) > 1:
+            msg += ' в количестве ' + data['i_count'] + ' шт.'
+    elif data['code'] == 3:
+        msg = 'Вы потеряли ' + str(data['i_count']) + ' штук предмета ' + data['i_name']
+    return msg
 
 
 def add_item(d_id, i_id, count):
-    data = requests.post(keys.__add_item__, data={'d_id': d_id, 'i_id': i_id, 'count': count})
+    data = requests.post(keys.__add_item_url__, data={'d_id': d_id, 'i_id': i_id, 'count': count})
     print(data.content)
-    return data.json()
+    data = data.json()
+    msg = ''
+    if data:
+        code = data['code']
+        if code == 0:
+            msg = 'Предмет не найден'
+        elif code == 2:
+            msg = 'Пользователь не найден'
+        elif code == 3:
+            msg = 'Ошибка запроса'
+        elif code == 4:
+            msg = 'Вы получили ' + data['item_name']
+        elif code == 5:
+            msg = 'Количество ' + data['item_name'] + ' увеличено на ' + str(data['count'])
+        elif code == 6:
+            msg = 'У вас уже есть этот предмет'
+    return msg
 
 
 def change_lang(lang, d_id):
-    data = requests.post(keys.__change_lang__, data={'lang': lang, 'd_id': d_id})
-    print(data.content)
+    data = requests.post(keys.__change_lang_url__, data={'lang': lang, 'd_id': d_id})
     return data.json()['code']
 
 
 def get_info(discord_id):
     data = requests.post(keys.__get_user_url__, data={'discord_id': discord_id})
     result = data.json()
-    print(result['user'][0])
     if result['code'] == 1:
         mes = '\n```\n'
         mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '/' + result['user'][0]['total_count'] + '\n'
@@ -109,6 +158,7 @@ def show_help():
         msg += l.value + ' '
     msg += '\n'
     msg += '!profile - отобразить ваш профиль\n'
+    msg += '!inv - просмотреть инвентарь\n'
     msg += '!show_task - получить ссылку на список заданий\n'
     msg += '!show_task <Название> - получить информацию об указанном задании\n'
     msg += '!exec <Название> <Ссылка> - отправить на проверку задачу, указав её название и ссылку на неё. Ссылки ' \
@@ -152,6 +202,16 @@ def get_phase(pr_ph_id):
     return msg
 
 
+def message_author_is_admin(message):
+    return message.author == message.server.owner
+
+
+def get_item_info(d_id, item_name):
+    data = requests.post(keys.__get_item_info_url__, data={'d_id': d_id, 'i_name': item_name})
+    print(data.content)
+    pass
+
+
 @client.event
 async def on_message(message):
     if message.author == client.user:
@@ -165,8 +225,34 @@ async def on_message(message):
     if message.content.startswith(BotCommands.HELP.value):
         msg = show_help()
 
+    if message.content.startswith(BotCommands.INV.value):
+        msg = get_inv(message.author.id)
+        target = message.author
+
+    if message.content.startswith(BotCommands.GET_ITEM_INFO.value):
+        a = message.content.split(' ')
+        target = message.author
+        if len(a) != 2:
+            msg = 'Указаны не все параметры'
+        else:
+            msg = get_item_info(message.author.id, a[1])
+
+    if message.content.startswith(BotCommands.REMOVE_ITEM.value):
+        if message_author_is_admin(message):
+            a = message.content.split(' ')
+            user_id = re.sub("[<>#@!]", " ", a[1]).strip()
+            count = 0
+            if len(a) == 3:
+                count = 0
+            elif len(a) == 4:
+                count = a[3]
+            msg = remove_item(user_id, a[2], count)
+            target = message.server.get_member(user_id)
+        else:
+            msg = 'У вас не достаточно прав'
+
     if message.content.startswith(BotCommands.ADD_ITEM.value):
-        if message.author == message.server.owner:
+        if message_author_is_admin(message):
             a = message.content.split(' ')
             count = 0
             if len(a) == 3:
@@ -174,30 +260,14 @@ async def on_message(message):
             elif len(a) == 4:
                 count = a[3]
 
-            data = add_item(a[1], a[2], count)  # d_id, i_id, count
-
-            if data:
-                code = data['code']
-                if code == 0:
-                    msg = 'Предмет не найден'
-                elif code == 2:
-                    msg = 'Пользователь не найден'
-                elif code == 3:
-                    msg = 'Ошибка запроса'
-                elif code == 4:
-                    target = message.server.get_member(a[1])
-                    msg = 'Вы получили ' + data['item_name']
-                elif code == 5:
-                    target = message.server.get_member(a[1])
-                    msg = 'Количество ' + data['item_name'] + ' увеличено на ' + str(data['count'])
-                elif code == 6:
-                    msg = 'У вас уже есть этот предмет'
-
+            user_id = re.sub("[<>#@!]", " ", a[1]).strip()
+            msg = add_item(user_id, a[2], count)  # d_id, i_id, count
+            target = message.server.get_member(user_id)
         else:
             msg = 'У вас не достаточно прав'
 
     if message.content.startswith(BotCommands.DISCARD.value):
-        if message.author == message.server.owner:
+        if message_author_is_admin(message):
             a = message.content.split(' ')
             if len(a) != 2:
                 msg = 'Не верное количество параметров'
@@ -215,7 +285,7 @@ async def on_message(message):
             msg = 'У вас не достаточно прав'
 
     if message.content.startswith(BotCommands.VALIDATE.value):
-        if message.author == message.server.owner:
+        if message_author_is_admin(message):
             a = message.content.split(' ')
             if len(a) != 2:
                 msg = 'Не верное количество параметров'
@@ -253,7 +323,7 @@ async def on_message(message):
         msg = get_info(message.author.id)
 
     if message.content.startswith(BotCommands.START_SCENARIO.value):
-        if message.author == message.server.owner:
+        if message_author_is_admin(message):
             msg = start_scenario_message()
 
     if message.content.startswith(BotCommands.CHANGE_LANG.value):
@@ -271,7 +341,7 @@ async def on_message(message):
                 msg = 'Не верный язык'
 
     if message.content.startswith(BotCommands.START_PHASE.value):
-        if message.author == message.server.owner:
+        if message_author_is_admin(message):
             a = message.content.split(' ')
             if len(a) != 2:
                 msg = 'Не указан id фазы'
@@ -293,7 +363,9 @@ async def on_message(message):
         else:
             msg = reg(message.author.id, a[1])
             if msg == 1:
-                msg = 'Вы успешно зарегистировались'
+                msg = 'Вы успешно зарегистировались\n'
+                msg += add_item(message.author.id, 1, 1)
+                target = message.server.get_member(message.author.id)
             elif msg == 2:
                 msg = 'Вы уже зарегистрированы'
             elif msg == 3:
@@ -332,3 +404,4 @@ async def on_ready():
 
 
 client.run(keys.__TOKEN__)
+# client.run(keys.__TOKEN_BAKA__)

@@ -9,6 +9,7 @@ class BotCommands(Enum):
     VALIDATE = '!validate'
     DISCARD = '!discard'
     PROFILE = '!profile'
+    INV = '!inv'
     SHOW_STACK = '!show_stack'
     HELP = '!help'
     GET_MAX_POINTS = '!get_max_points'
@@ -17,3 +18,5 @@ class BotCommands(Enum):
     START_PHASE = '!start_phase'
     START_SCENARIO = '!start_scenario'  # TODO: not realized
     ADD_ITEM = '!add_item'
+    REMOVE_ITEM = '!remove_item'
+    GET_ITEM_INFO = '!get_item_info'

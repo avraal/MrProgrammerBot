@@ -233,7 +233,7 @@ async def on_voice_state_update(before, after):
     data = requests.post(keys.__check_ach_in_voice_url__, data={'d_id': before.id})
     if data.json()['code'] == 1:
         msg = before.mention + ' получил достижение \"' + data.json()['title'] + ' - ' + data.json()['desc'] + '\"'
-        channel = before.server.get_channel('469091476081475584')
+        channel = before.server.get_channel('519937196891832321')
         await client.send_message(channel, msg)
     elif data.json()['code'] == 0:
         print('Ошибка запроса')
@@ -337,7 +337,7 @@ async def on_message(message):
                     msg = 'Задание ' + data['t_name'] + ' выполнено'
                     if data['points'] >= 60:
                         ach_mes = add_achievement(message.server.get_member(data['d_id']), data['d_id'], Achievements.GET_1TIER)  # ToDo: change achievement code to Enum
-                        hello_world_channel = message.server.get_channel('469091476081475584')
+                        hello_world_channel = message.server.get_channel('519937196891832321')
                         await client.send_message(hello_world_channel, ach_mes)
                     target = message.server.get_member(data['d_id'])
                 elif code == 2:

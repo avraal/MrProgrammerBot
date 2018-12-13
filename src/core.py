@@ -8,6 +8,10 @@ from src import keys
 from src.botcommands import BotCommands
 from enum import Enum, unique
 
+@unique
+class Achievements(Enum):
+    GET_1TIER = 1,
+    FIRST_VOICE_EXPERIENCE = 2
 
 @unique
 class Languages(Enum):
@@ -171,7 +175,6 @@ def show_help():
 
 def str_to_embed(title, text, points):
     text = parse_task(text).strip()
-    print(text)
     embed = discord.Embed(title=title, description=text)
     points = float(points)
     colors = {'common': 0xd5d5d5, 'uncommon': 0x1be700, 'rare': 0x008eff, 'epic': 0xc800e6}
@@ -212,6 +215,7 @@ def get_item_info(d_id, item_name):
     print(data.content)
     data = data.json()
     code = data['code']
+    msg = ''
     if code == 0:
         msg = 'Предмет не найден'
     elif code == 1:
@@ -221,6 +225,31 @@ def get_item_info(d_id, item_name):
             msg += ' (' + data['i_count'] + ') шт.'
         msg += ' - ' + data['i_desc']
         msg += '\n```\n'
+    return msg
+
+
+@client.event
+async def on_voice_state_update(before, after):
+    data = requests.post(keys.__check_ach_in_voice_url__, data={'d_id': before.id})
+    if data.json()['code'] == 1:
+        msg = before.mention + ' получил достижение \"' + data.json()['title'] + ' - ' + data.json()['desc'] + '\"'
+        channel = before.server.get_channel('469091476081475584')
+        await client.send_message(channel, msg)
+    elif data.json()['code'] == 0:
+        print('Ошибка запроса')
+    elif data.json()['code'] == 3:
+        print('Пользователь не найден')
+    print(data.content)
+
+
+def add_achievement(user, d_id, a_id):
+    data = requests.post(keys.__add_achievement_url__, data={'d_id': d_id, 'a_id': a_id})
+    print(data.content)
+    data = data.json()
+    msg = ''
+    code = data['code']
+    if code == 1:
+        msg = user.mention + ' получил достижение \"' + data['title'] + ' - ' + data['desc'] + '\"'
     return msg
 
 
@@ -306,6 +335,10 @@ async def on_message(message):
                 code = data['code']
                 if code == 1:
                     msg = 'Задание ' + data['t_name'] + ' выполнено'
+                    if data['points'] >= 60:
+                        ach_mes = add_achievement(message.server.get_member(data['d_id']), data['d_id'], Achievements.GET_1TIER)  # ToDo: change achievement code to Enum
+                        hello_world_channel = message.server.get_channel('469091476081475584')
+                        await client.send_message(hello_world_channel, ach_mes)
                     target = message.server.get_member(data['d_id'])
                 elif code == 2:
                     msg = 'Ошибка запроса'

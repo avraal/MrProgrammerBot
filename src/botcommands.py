@@ -19,4 +19,4 @@ class BotCommands(Enum):
     START_SCENARIO = '!start_scenario'  # TODO: not realized
     ADD_ITEM = '!add_item'
     REMOVE_ITEM = '!remove_item'
-    GET_ITEM_INFO = '!get_item_info'
+    GET_ITEM_INFO = '!get_item'

@@ -49,7 +49,7 @@ def get_inv(d_id):
 
 
 def parse_task(task):
-    task = task.replace('<br>', '')
+    task = task.replace('<br>', '\n')
     task = task.replace('<pre>', '')
     task = task.replace('</pre>', '')
     return task
@@ -158,7 +158,7 @@ def show_help():
         msg += l.value + ' '
     msg += '\n'
     msg += '!profile - отобразить ваш профиль\n'
-    msg += '!inv - просмотреть инвентарь\n'
+    # msg += '!inv - просмотреть инвентарь\n'
     msg += '!show_task - получить ссылку на список заданий\n'
     msg += '!show_task <Название> - получить информацию об указанном задании\n'
     msg += '!exec <Название> <Ссылка> - отправить на проверку задачу, указав её название и ссылку на неё. Ссылки ' \
@@ -170,7 +170,8 @@ def show_help():
 
 
 def str_to_embed(title, text, points):
-    text = parse_task(text)
+    text = parse_task(text).strip()
+    print(text)
     embed = discord.Embed(title=title, description=text)
     points = float(points)
     colors = {'common': 0xd5d5d5, 'uncommon': 0x1be700, 'rare': 0x008eff, 'epic': 0xc800e6}
@@ -209,7 +210,18 @@ def message_author_is_admin(message):
 def get_item_info(d_id, item_name):
     data = requests.post(keys.__get_item_info_url__, data={'d_id': d_id, 'i_name': item_name})
     print(data.content)
-    pass
+    data = data.json()
+    code = data['code']
+    if code == 0:
+        msg = 'Предмет не найден'
+    elif code == 1:
+        msg = '```\n'
+        msg += data['i_name']
+        if int(data['i_count']) > 1:
+            msg += ' (' + data['i_count'] + ') шт.'
+        msg += ' - ' + data['i_desc']
+        msg += '\n```\n'
+    return msg
 
 
 @client.event

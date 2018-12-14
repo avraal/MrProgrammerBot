@@ -32,6 +32,25 @@ def get_task_by_name(name):
     return data.json()['task'][0]
 
 
+def get_achs(d_id):
+    data = requests.post(keys.__get_ach_list_url__, data={'d_id': d_id})
+    print(data.content)
+    data = data.json()
+    msg = ''
+    code = data['code']
+    if code == 0:
+        msg = 'Пользователь не найден'
+    elif code == 2:
+        msg = 'Достижений нет'
+    elif code == 1:
+        msg = '```\n'
+        achs = data['ach']
+        for a in achs:
+            msg += '---' + a['title'] + '---\n'
+        msg += '```'
+    return msg
+
+
 def get_inv(d_id):
     data = requests.post(keys.__get_inventory_url__, data={'d_id': d_id})
     msg = ''
@@ -146,6 +165,7 @@ def get_info(discord_id):
         mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '/' + result['user'][0]['total_count'] + '\n'
         mes += 'Байты: ' + str(round(float(result['user'][0]['points']), 3)) + '\n'
         mes += 'Язык: ' + result['user'][0]['u_class'] + '\n'
+        mes += 'Достижений: ' + result['user'][0]['ach_count'] + '\n'
         mes += '```\n'
     else:
         mes = 'Ошибка запроса'
@@ -162,6 +182,7 @@ def show_help():
         msg += l.value + ' '
     msg += '\n'
     msg += '!profile - отобразить ваш профиль\n'
+    msg += '!ach - посмотреть список достижений \n'
     # msg += '!inv - просмотреть инвентарь\n'
     msg += '!show_task - получить ссылку на список заданий\n'
     msg += '!show_task <Название> - получить информацию об указанном задании\n'
@@ -268,6 +289,10 @@ async def on_message(message):
 
     if message.content.startswith(BotCommands.INV.value):
         msg = get_inv(message.author.id)
+        target = message.author
+
+    if message.content.startswith(BotCommands.ACH.value):
+        msg = get_achs(message.author.id)
         target = message.author
 
     if message.content.startswith(BotCommands.GET_ITEM_INFO.value):

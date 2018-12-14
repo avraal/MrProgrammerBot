@@ -8,10 +8,13 @@ from src import keys
 from src.botcommands import BotCommands
 from enum import Enum, unique
 
+
 @unique
 class Achievements(Enum):
     GET_1TIER = 1,
-    FIRST_VOICE_EXPERIENCE = 2
+    FIRST_VOICE_EXPERIENCE = 2,
+    TORTURE = 3
+
 
 @unique
 class Languages(Enum):
@@ -43,10 +46,10 @@ def get_achs(d_id):
     elif code == 2:
         msg = 'Достижений нет'
     elif code == 1:
-        msg = '```\n'
+        msg = '```css\n'
         achs = data['ach']
         for a in achs:
-            msg += '---' + a['title'] + '---\n'
+            msg += '[' + a['title'] + ']\n'
         msg += '```'
     return msg
 
@@ -264,13 +267,15 @@ async def on_voice_state_update(before, after):
 
 
 def add_achievement(user, d_id, a_id):
-    data = requests.post(keys.__add_achievement_url__, data={'d_id': d_id, 'a_id': a_id})
+    data = requests.post(keys.__add_achievement_url__, data={'d_id': d_id, 'a_id': a_id.value})
     print(data.content)
     data = data.json()
     msg = ''
     code = data['code']
     if code == 1:
         msg = user.mention + ' получил достижение \"' + data['title'] + ' - ' + data['desc'] + '\"'
+    elif code == 2:
+        print('Не возможно найти достижение ' + str(a_id))
     return msg
 
 
@@ -360,9 +365,13 @@ async def on_message(message):
                 code = data['code']
                 if code == 1:
                     msg = 'Задание ' + data['t_name'] + ' выполнено'
+                    user = message.server.get_member(data['d_id'])
+                    hello_world_channel = message.server.get_channel('519937196891832321')
                     if data['points'] >= 60:
-                        ach_mes = add_achievement(message.server.get_member(data['d_id']), data['d_id'], Achievements.GET_1TIER)  # ToDo: change achievement code to Enum
-                        hello_world_channel = message.server.get_channel('519937196891832321')
+                        ach_mes = add_achievement(user, data['d_id'], Achievements.GET_1TIER)
+                        await client.send_message(hello_world_channel, ach_mes)
+                    if data['try_c'] == '100':
+                        ach_mes = add_achievement(user, data['d_id'], Achievements.TORTURE)
                         await client.send_message(hello_world_channel, ach_mes)
                     target = message.server.get_member(data['d_id'])
                 elif code == 2:

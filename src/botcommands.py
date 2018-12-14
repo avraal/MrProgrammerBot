@@ -10,6 +10,7 @@ class BotCommands(Enum):
     DISCARD = '!discard'
     PROFILE = '!profile'
     INV = '!inv'
+    ACH = '!ach'
     SHOW_STACK = '!show_stack'
     HELP = '!help'
     GET_MAX_POINTS = '!get_max_points'

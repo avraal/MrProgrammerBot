@@ -13,7 +13,8 @@ from enum import Enum, unique
 class Achievements(Enum):
     GET_1TIER = 1,
     FIRST_VOICE_EXPERIENCE = 2,
-    TORTURE = 3
+    TORTURE = 3,
+    HELP = 4
 
 
 @unique
@@ -160,11 +161,22 @@ def change_lang(lang, d_id):
     return data.json()['code']
 
 
+def get_user_info(discord_id, param):
+    data = requests.post(keys.__get_user_url__, data={'discord_id': discord_id})
+    result = data.json()
+    if result['code'] == 1:
+        mes = result['user'][0][param]
+    else:
+        mes = 'Ошибка запроса'
+    return mes
+
+
 def get_info(discord_id):
     data = requests.post(keys.__get_user_url__, data={'discord_id': discord_id})
     result = data.json()
     if result['code'] == 1:
         mes = '\n```\n'
+        # mes += 'ID: ' + result['user'][0]['u_id'] + '\n'
         mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '/' + result['user'][0]['total_count'] + '\n'
         mes += 'Байты: ' + str(round(float(result['user'][0]['points']), 3)) + '\n'
         mes += 'Язык: ' + result['user'][0]['u_class'] + '\n'
@@ -381,6 +393,11 @@ async def on_message(message):
         else:
             msg = 'У вас не достаточно прав'
 
+    if message.content.startswith('!рудз'):
+        user = message.server.get_member(message.author.id)
+        ach_mes = add_achievement(user, user.id, Achievements.HELP)
+        await client.send_message(message.server.get_channel('519937196891832321'), ach_mes)
+
     if message.content.startswith(BotCommands.EXEC.value):
         a = message.content.split(' ')
         if len(a) != 3:
@@ -462,7 +479,8 @@ async def on_message(message):
                 await client.send_message(target, embed=embed)
                 return
             elif len(a) == 1:
-                msg = keys.__get_tasklist_url__
+                u_id = get_user_info(message.author.id, 'u_id')
+                msg = keys.__get_tasklist_url__ + '?u_id=' + u_id
             else:
                 raise KeyError
         except KeyError:

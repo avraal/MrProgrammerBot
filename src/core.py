@@ -11,7 +11,7 @@ from enum import Enum, unique
 
 @unique
 class Achievements(Enum):
-    GET_1TIER = 1,
+    GET_2TIER = 1,
     FIRST_VOICE_EXPERIENCE = 2,
     TORTURE = 3,
     HELP = 4
@@ -380,8 +380,10 @@ async def on_message(message):
                     user = message.server.get_member(data['d_id'])
                     hello_world_channel = message.server.get_channel('519937196891832321')
                     if data['points'] >= 60:
-                        ach_mes = add_achievement(user, data['d_id'], Achievements.GET_1TIER)
+                        ach_mes = add_achievement(user, data['d_id'], Achievements.GET_2TIER)
                         await client.send_message(hello_world_channel, ach_mes)
+                        inc_tier = requests.post(keys.__inc_user_tier_url__, data={'d_id': data['d_id']})
+                        data = inc_tier.json()
                     if data['try_c'] == '100':
                         ach_mes = add_achievement(user, data['d_id'], Achievements.TORTURE)
                         await client.send_message(hello_world_channel, ach_mes)

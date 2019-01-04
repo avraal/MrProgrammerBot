@@ -20,7 +20,7 @@ class Achievements(Enum):
 @unique
 class Languages(Enum):
     CPP = 'C++'
-    CS = 'C#'
+    CS  = 'C#'
     WEB = 'Web'
 
     @classmethod
@@ -99,11 +99,13 @@ def reg(author_id, author_class):
 
 def push_task(discord_id, t_name, t_link):
     data = requests.post(keys.__push_task_url__, data={'discord_id': discord_id, 't_name': t_name, 't_link': t_link})
+    print(data.content)
     return data.json()['code']
 
 
-def get_max_points():
-    data = requests.post(keys.__get_max_points_url__)
+def get_max_points(t_tier):
+    data = requests.post(keys.__get_max_points_url__, data={'t_tier': t_tier})
+    print(data.content)
     return data.json()['points']
 
 
@@ -177,7 +179,8 @@ def get_info(discord_id):
     if result['code'] == 1:
         mes = '\n```\n'
         # mes += 'ID: ' + result['user'][0]['u_id'] + '\n'
-        mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '/' + result['user'][0]['total_count'] + '\n'
+        percent = 100 * float(result['user'][0]['task_count']) / float(result['user'][0]['total_count'])
+        mes += 'Выполненно заданий: ' + result['user'][0]['task_count'] + '/' + result['user'][0]['total_count'] + ' (' + str(round(percent, 2)) + '%' + ')\n'
         mes += 'Байты: ' + str(round(float(result['user'][0]['points']), 3)) + '\n'
         mes += 'Язык: ' + result['user'][0]['u_class'] + '\n'
         mes += 'Достижений: ' + result['user'][0]['ach_count'] + '\n'
@@ -198,7 +201,7 @@ def show_help():
     msg += '\n'
     msg += '!profile - отобразить ваш профиль\n'
     msg += '!ach - посмотреть список достижений \n'
-    # msg += '!inv - просмотреть инвентарь\n'
+    msg += '!inventory - просмотреть инвентарь\n'
     msg += '!show_task - получить ссылку на список заданий\n'
     msg += '!show_task <Название> - получить информацию об указанном задании\n'
     msg += '!exec <Название> <Ссылка> - отправить на проверку задачу, указав её название и ссылку на неё. Ссылки ' \
@@ -213,15 +216,17 @@ def str_to_embed(title, text, points):
     text = parse_task(text).strip()
     embed = discord.Embed(title=title, description=text)
     points = float(points)
-    colors = {'common': 0xd5d5d5, 'uncommon': 0x1be700, 'rare': 0x008eff, 'epic': 0xc800e6}
+    colors = {'common': 0xd5d5d5, 'uncommon': 0x1be700, 'rare': 0x008eff, 'epic': 0xc800e6, 'legendary': 0xcff9814}
     if 1 <= points < 1.3:
         embed.colour = colors['common']
     elif 1.3 <= points < 1.5:
         embed.colour = colors['uncommon']
     elif 1.5 <= points < 1.7:
         embed.colour = colors['rare']
-    elif points >= 1.7:
+    elif 1.7 <= points < 1.8:
         embed.colour = colors['epic']
+    elif points >= 1.8:
+        embed.colour = colors['legendary']
 
     return embed
 
@@ -288,6 +293,8 @@ def add_achievement(user, d_id, a_id):
         msg = user.mention + ' получил достижение \"' + data['title'] + ' - ' + data['desc'] + '\"'
     elif code == 2:
         print('Не возможно найти достижение ' + str(a_id))
+    elif code == 3:
+        print('У пользователя уже есть это достижение')
     return msg
 
 
@@ -379,14 +386,20 @@ async def on_message(message):
                     msg = 'Задание ' + data['t_name'] + ' выполнено'
                     user = message.server.get_member(data['d_id'])
                     hello_world_channel = message.server.get_channel('519937196891832321')
+                    # hello_world_channel = message.server.get_channel('469091476081475584')
                     if data['points'] >= 60:
                         ach_mes = add_achievement(user, data['d_id'], Achievements.GET_2TIER)
-                        await client.send_message(hello_world_channel, ach_mes)
-                        inc_tier = requests.post(keys.__inc_user_tier_url__, data={'d_id': data['d_id']})
-                        data = inc_tier.json()
+                        if ach_mes:
+                            await client.send_message(hello_world_channel, ach_mes)
+                            inc_tier = requests.post(keys.__inc_user_tier_url__, data={'d_id': data['d_id']})
+                            # data = inc_tier.json()
                     if data['try_c'] == '100':
                         ach_mes = add_achievement(user, data['d_id'], Achievements.TORTURE)
-                        await client.send_message(hello_world_channel, ach_mes)
+                        if ach_mes:
+                            await client.send_message(hello_world_channel, ach_mes)
+                    if data['t_name'] == 'Task-C1':
+                        item_msg = add_item(data['d_id'], 4, 1)  # d_id, i_id, count
+                        await client.send_message(user, item_msg)
                     target = message.server.get_member(data['d_id'])
                 elif code == 2:
                     msg = 'Ошибка запроса'
@@ -400,8 +413,16 @@ async def on_message(message):
         ach_mes = add_achievement(user, user.id, Achievements.HELP)
         await client.send_message(message.server.get_channel('519937196891832321'), ach_mes)
 
+    if message.content.startswith(BotCommands.INVITE.value):
+        target_channel = client.get_channel('524934054521602087')
+        channel_link = await client.create_invite(destination=target_channel, max_age=86400, unique=False)
+        user = await client.get_user_info('262139393203109890')
+        target = user
+        msg = channel_link
+
     if message.content.startswith(BotCommands.EXEC.value):
         a = message.content.split(' ')
+        print(a)
         if len(a) != 3:
             msg = 'Не верное количество параметров. Вероятно, вы забыли указать ссылку на решение'
         else:
@@ -452,7 +473,13 @@ async def on_message(message):
                 return
 
     if message.content.startswith(BotCommands.GET_MAX_POINTS.value):
-        msg = str(round(float(get_max_points()), 3))
+        a = message.content.split(' ')
+        tier = 0
+        if len(a) == 1:
+            tier = 0
+        elif len(a) == 2:
+            tier = int(a[1])
+        msg = str(round(float(get_max_points(tier)), 3))
 
     if message.content.startswith(BotCommands.REGME.value):
         a = message.content.split(' ')

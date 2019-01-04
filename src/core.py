@@ -397,7 +397,7 @@ async def on_message(message):
                         ach_mes = add_achievement(user, data['d_id'], Achievements.TORTURE)
                         if ach_mes:
                             await client.send_message(hello_world_channel, ach_mes)
-                    if data['t_name'] == 'Task-C1':
+                    if data['t_name'] == 'Task-C2':
                         item_msg = add_item(data['d_id'], 4, 1)  # d_id, i_id, count
                         await client.send_message(user, item_msg)
                     target = message.server.get_member(data['d_id'])
